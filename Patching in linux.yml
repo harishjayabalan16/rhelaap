@@ -1,0 +1,40 @@
+Patching in linux servers:
+
+---
+- name: Patch Linux Servers
+  hosts: all
+  become: yes
+
+  tasks:
+  - name: Update package cache
+    apt:
+      update_cache: yes
+    when: ansible_os_family == "Debian"
+
+  - name: Install security updates
+    apt:
+      name: "*-security"
+      state: latest
+    when: ansible_os_family == "Debian"
+
+  - name: Update system packages
+    yum:
+      name: "update all packages"
+      state: latest
+    when: ansible_os_family == "RedHat"
+
+  - name: Restart services if needed
+    service:
+      name: "{{ item }}"
+      state: restarted
+    with_items:
+      - apache2
+    when: item in ansible_facts.services
+
+  - name: Reboot if necessary
+    reboot:
+      delay: 5
+      pre_reboot_delay: 10
+      post_reboot_delay: 30
+    register: reboot_required
+    when: reboot_required.reboot_required

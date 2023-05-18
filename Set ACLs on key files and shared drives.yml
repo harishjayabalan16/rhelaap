@@ -1,0 +1,50 @@
+Set ACLs on Key Files and Shared Drives along with owner rights for windows:
+---
+- name: Set ACLs on key files and shared drives
+  hosts: windows
+  gather_facts: no
+  tasks:
+
+- name: Set owner of file
+  win_owner:
+    path: C:\path\to\file
+    owner: Administrators
+
+- name: Set ACL on file
+  win_acl:
+    path: C:\path\to\file
+    user: "Domain\username"
+    rights: "read,execute"
+    state: present
+- name: Set ACL on shared drive
+  win_acl:
+    path: "\\server\share"
+    user: "Domain\username"
+    rights: "read,write,execute"
+    state: present
+
+Set ACLs on Key Files and Shared Drives along with owner rights for linux:
+---
+- name: Set ACLs on key files and shared drives
+  hosts: all
+  become: true
+  tasks:
+- name: Set owner of file
+  file:
+    path: /path/to/file
+    owner: username
+- name: Set ACL on file
+  acl:
+    path: /path/to/file
+    entity: username
+    etype: user
+    permissions: "rwx"
+    state: present
+- name: Set ACL on shared drive
+  acl:
+    path: /path/to/shared/drive
+    entity: username
+    etype: user
+    permissions: "rwx"
+    recursive: yes
+    state: present

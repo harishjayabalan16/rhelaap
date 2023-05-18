@@ -1,0 +1,31 @@
+Playbook for OS Patching:
+
+---
+- name: Patch Operating System
+  hosts: all
+  become: yes
+
+  tasks:
+  - name: Update package cache
+    apt:
+      update_cache: yes
+    when: ansible_os_family == "Debian"
+
+  - name: Install security updates
+    apt:
+      name: "*-security"
+      state: latest
+    when: ansible_os_family == "Debian"
+
+  - name: Update system packages
+    yum:
+      name: "*"
+      state: latest
+    when: ansible_os_family == "RedHat"
+
+  - name: Reboot if necessary
+    reboot:
+      delay: 5
+      pre_reboot_delay: 10
+      post_reboot_delay: 30
+    when: reboot_required.reboot_required

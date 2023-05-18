@@ -1,0 +1,122 @@
+_id: 4625
+      register: failure_events
+    - name: Print successful logon events
+      debug:
+        msg: "{{ item.message }}"
+      loop: "{{ success_events.events }}"
+    - name: Print failed logon events
+      debug:
+        msg: "{{ item.message }}"
+      loop: "{{ failure_events.events }}"
+
+---
+- name: Audit Account Logon Events
+  hosts: linux
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Get successful logon events
+      shell: grep "session opened for user" /var/log/auth.log
+      register: success_events
+    - name: Get failed logon events
+      shell: grep "authentication failure" /var/log/auth.log
+      register: failure_events
+    - name: Print successful logon events
+      debug:
+        msg: "{{ item }}"
+      loop: "{{ success_events.stdout_lines }}"
+    - name: Print failed logon events
+      debug:
+        msg: "{{ item }}"
+      loop: "{{ failure_events.stdout_lines }}"
+
+Audit Account Management success and failures for windows and linux:
+
+---
+- name: Audit account management success and failure
+  hosts: all
+  become: true
+  gather_facts: yes
+
+  vars:
+    # Define log paths for different platforms
+    windows_log_path: 'C:\Windows\System32\winevt\Logs\Security.evtx'
+    linux_log_path: '/var/log/auth.log'
+
+  tasks:
+    - name: Check if platform is Windows
+      win_stat:
+        path: '{{ windows_log_path }}'
+      register: is_windows
+
+    - name: Audit account management on Windows
+      win_security_audit_policy:
+        category: 'account management'
+        subcategory: 'Audit account management'
+        success: 'enable'
+        failure: 'enable'
+      when: is_windows.stat.exists == true
+
+    - name: Audit account management on Linux
+      lineinfile:
+        path: '{{ linux_log_path }}'
+        line: '-w /var/log/auth.log -p wa -k audit-account-management'
+      when: is_windows.stat.exists != true
+
+
+Audit Object Access Success and Failures for windows and linux:
+
+- name: Audit Object Access
+  hosts: all
+  become: true
+
+  tasks:
+  - name: Configure Audit Rules on Linux
+    when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+    copy:
+      src: audit.rules
+      dest: /etc/audit/rules.d/
+      mode: 0640
+    notify:
+      - Restart auditd
+
+  - name: Configure Audit Rules on Windows
+    when: ansible_os_family == 'Windows'
+    win_audit_policy_system:
+      subcategory: 'Audit Detailed File Share'
+      audit_type: 'Success and Failure'
+
+  handlers:
+  - name: Restart auditd
+    service:
+      name: auditd
+      state: restarted
+
+Audit Privilege Use Success, Failures for windows and linux:
+
+- name: Audit Privilege Use
+  hosts: all
+  become: true
+
+  tasks:
+ - name: Configure Audit Rules on Linux
+    when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+    copy:
+      src: audit.rules
+      dest: /etc/audit/rules.d/
+      mode: 0640
+    notify:
+      - Restart auditd
+
+  - name: Configure Audit Rules on Windows
+    when: ansible_os_family == 'Windows'
+    win_audit_policy_system:
+      subcategory: 'Audit Sensitive Privilege Use'
+      audit_type: 'Success and Failure'
+
+  handlers:
+  - name: Restart auditd
+    service:
+      name: auditd
+      state: restarted
+

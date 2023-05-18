@@ -1,0 +1,66 @@
+Playbook for Microsoft Network Client:
+
+---
+- name: Configure Windows Security Settings
+  hosts: windows
+  become: yes
+  tasks:
+    - name: Set "Microsoft network client: Digitally sign communications (always)"
+      win_security_policy:
+        option: "Microsoft network client: Digitally sign communications (always)"
+        value: "Enabled"
+
+    - name: Set "Microsoft network client: Digitally sign communications (if server agrees)"
+      win_security_policy:
+        option: "Microsoft network client: Digitally sign communications (if server agrees)"
+        value: "Enabled"
+
+    - name: Set "Microsoft network server: Amount of idle time required before suspending session"
+      win_security_policy:
+        option: "Microsoft network server: Amount of idle time required before suspending session"
+        value: "15"
+
+    - name: Set "Microsoft network server: Digitally sign communications (if client agrees)"
+      win_security_policy:
+        option: "Microsoft network server: Digitally sign communications (if client agrees)"
+        value: "Enabled"
+
+    - name: Set "Network security: Do not store LAN Manager hash value on next password change"
+      win_security_policy:
+        option: "Network security: Do not store LAN Manager hash value on next password change"
+        value: "Enabled"
+
+
+- name: Configure Linux Security Settings
+  hosts: linux
+  become: yes
+  tasks:
+    - name: Set "Microsoft network client: Digitally sign communications (always)"
+      lineinfile:
+        path: /etc/samba/smb.conf
+        regexp: "client signing"
+        line: "client signing = mandatory"
+
+    - name: Set "Microsoft network client: Digitally sign communications (if server agrees)"
+      lineinfile:
+        path: /etc/samba/smb.conf
+        regexp: "^client use spnego"
+        line: "client use spnego = yes"
+
+    - name: Set "Microsoft network server: Amount of idle time required before suspending session"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^ClientAliveInterval"
+        line: "ClientAliveInterval 900"
+
+    - name: Set "Microsoft network server: Digitally sign communications (if client agrees)"
+      lineinfile:
+        path: /etc/samba/smb.conf
+        regexp: "^server signing"
+        line: "server signing = mandatory"
+
+    - name: Set "Network security: Do not store LAN Manager hash value on next password change"
+      lineinfile:
+        path: /etc/security/pwquality.conf
+        regexp: "^nullok"
+        line: "nullok=1"

@@ -1,0 +1,56 @@
+Setting Account lockout policy for windows and linux:
+---
+- name: Set account lockout policy
+  hosts: all
+  become: yes
+
+  vars:
+    windows_lockout_threshold: 5
+    windows_lockout_duration: 30
+    linux_lockout_threshold: 5
+    linux_lockout_duration: 1800
+
+  tasks:
+    - name: Configure Windows account lockout policy
+      win_security_policy:
+        option: lockout_policy
+        data:
+          threshold: "{{ windows_lockout_threshold }}"
+          duration: "{{ windows_lockout_duration }}"
+      when: ansible_os_family == 'Windows'
+     
+    - name: Configure Linux account lockout policy
+      lineinfile:
+        dest: /etc/pam.d/system-auth
+        regexp: '^auth\s+required\s+pam_faillock.so.*'	
+        line: 'auth        required      pam_faillock.so preauth silent audit deny={{ linux_lockout_threshold }} unlock_time={{ linux_lockout_duration }}'
+        state: present
+      when: ansible_os_family == 'Linux'
+
+Reset Account lockout counter after 30 minutes for windows and linux:
+---
+- name: Reset account lockout counter
+  hosts: all
+  become: yes
+
+  vars:
+    windows_lockout_duration: 30
+    linux_lockout_duration: 1800
+
+  tasks:
+    - name: Reset Windows account lockout counter
+      win_command: 'Reset-LocalAccountLockoutCounter -Identity "{{ item }}"'
+      when: ansible_os_family == 'Windows'
+      with_items: "{{ ansible_users }}"
+      register: win_reset_result
+
+    - name: Reset Linux account lockout counter
+      shell: 'faillock --reset --user {{ item }}'
+      when: ansible_os_family == 'Linux'
+      with_items: "{{ ansible_users }}"
+      register: linux_reset_result
+
+    - name: Wait for reset interval to elapse
+      pause:
+        minutes: "{{ windows_lockout_duration if ansible_os_family == 'Windows' else linux_lockout_duration }}"
+

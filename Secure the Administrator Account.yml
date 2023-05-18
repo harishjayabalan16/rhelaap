@@ -1,0 +1,58 @@
+To secure the Administrator Account for windows and linux:
+- name: Secure Administrator Account
+  hosts: all
+  become: true
+
+  tasks:
+  - name: Rename Administrator Account on Windows
+    when: ansible_os_family == 'Windows'
+    win_user:
+      name: Administrator
+      new_name: AdminAccount
+      password: "{{ admin_password }}"
+      state: present
+
+  - name: Create a new administrative user on Windows
+    when: ansible_os_family == 'Windows'
+    win_user:
+      name: "{{ new_admin_user }}"
+      password: "{{ new_admin_password }}"
+      groups: Administrators
+      state: present
+
+  - name: Create a new administrative user on Linux
+    when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+    user:
+      name: "{{ new_admin_user }}"
+      password: "{{ new_admin_password | password_hash('sha512') }}"
+      groups: sudo
+      shell: /bin/bash
+      state: present
+
+  - name: Disable root login on Linux
+    when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+    user:
+      name: root
+      shell: /usr/sbin/nologin
+      state: present
+
+  - name: Add new administrative user to sudoers file on Linux
+    when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+    lineinfile:
+      path: /etc/sudoers
+      line: "{{ new_admin_user }} ALL=(ALL) NOPASSWD:ALL"
+
+  - name: Set SSH login settings on Linux
+    when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+    copy:
+      src: sshd_config
+      dest: /etc/ssh/
+      mode: '0600'
+    notify:
+      - Restart SSH
+
+  handlers:
+  - name: Restart SSH
+    systemd:
+      name: sshd
+      state: restarted

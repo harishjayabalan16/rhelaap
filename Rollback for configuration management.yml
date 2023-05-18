@@ -1,0 +1,23 @@
+Playbook for rollback for configuration management:
+
+---
+- name: Rollback Configuration
+  hosts: all
+  become: yes
+  vars:
+    rollback_version: "v1"
+
+
+  tasks:
+  - name: Check if rollback version exists
+    shell:{{ rollback_version }}.cfg
+    register: rollback_check
+
+  - name: Rollback configuration
+    shell:{{ rollback_version }}.cfg /etc/config/current.cfg
+    when: rollback_check.rc == 0
+
+  - name: Restart service
+    service:
+      name: myservice
+      state: restarted

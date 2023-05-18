@@ -1,0 +1,30 @@
+Creating playbook for pre-check use case in windows and linux:
+---
+- name: Pre-Check Playbook
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Check OS version
+      debug:
+        msg: "OS version is {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: Check disk space
+      win_command: "Get-PSDrive"
+      register: win_disk_space
+      when: ansible_os_family == 'Windows'
+      
+    - name: Check disk space
+      shell: "df -h"
+      register: linux_disk_space
+      when: ansible_os_family == 'Linux'
+      
+    - name: Show disk space
+      debug:
+        var: win_disk_space.stdout_lines
+      when: ansible_os_family == 'Windows'
+
+    - name: Show disk space
+      debug:
+        var: linux_disk_space.stdout_lines
+      when: ansible_os_family == 'Linux'
